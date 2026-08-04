@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Marks Man — Student News, Last 7 Days</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Design tokens ---------- */
+  :root {
+    --paper: #faf9f6;
+    --paper-raised: #ffffff;
+    --ink: #171717;
+    --ink-soft: #3a3a3a;
+    --steel: #5b6270;
+    --rule: #e4e1d8;
+    --masthead: #b3122b;
+    --masthead-dark: #8c0e22;
+    --gold: #b8872b;
+    --ink-blue: #1f3a5f;
+
+    /* per-category accents — the one deliberate signature of this design */
+    --c-exams: #b3122b;
+    --c-campus_events: #c17a1f;
+    --c-scholarships: #2e6b4f;
+    --c-education_news: #294a75;
+    --c-student_news: #6b3f73;
+    --c-kiit_news: #157a76;
+
+    --font-display: "Source Serif 4", Georgia, serif;
+    --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* ---------- Utility bar ---------- */
+  .utility-bar {
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.78rem;
+    color: var(--steel);
+  }
+  .utility-bar .wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .utility-bar__tagline { letter-spacing: 0.02em; }
+  .search-input {
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: var(--ink);
+    width: 220px;
+    max-width: 45vw;
+  }
+  .search-input:focus {
+    outline: 2px solid var(--masthead);
+    outline-offset: 1px;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    text-align: center;
+    padding: 1.4rem 1.5rem 0;
+    border-bottom: 3px solid var(--ink);
+  }
+  .masthead__issue-line {
+    display: flex;
+    justify-content: space-between;
+    max-width: 1180px;
+    margin: 0 auto 0.6rem;
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .masthead h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .masthead__motto {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ink-blue);
+    margin-top: 0.3rem;
+  }
+  .masthead__sub {
+    font-size: 0.8rem;
+    color: var(--steel);
+    margin-top: 0.3rem;
+    letter-spacing: 0.03em;
+  }
+  .masthead__ornament {
+    color: var(--gold);
+    font-size: 1rem;
+    margin: 0.8rem 0 1rem;
+    letter-spacing: 0.6em;
+  }
+
+  /* ---------- Category nav ---------- */
+  .category-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--masthead);
+    box-shadow: 0 1px 0 var(--masthead-dark);
+  }
+  .category-nav__list {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    padding: 0 1.5rem;
+    scrollbar-width: none;
+  }
+  .category-nav__list::-webkit-scrollbar { display: none; }
+  .category-nav button {
+    all: unset;
+    cursor: pointer;
+    color: #ffe9ea;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.75rem 0.9rem;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+  }
+  .category-nav button:hover { color: #fff; }
+  .category-nav button.active {
+    color: #fff;
+    border-bottom-color: #fff;
+  }
+  .category-nav button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+  }
+
+  /* ---------- Status banner (shown only if API is unreachable) ---------- */
+  .demo-banner {
+    display: none;
+    background: #fbf3e3;
+    border-bottom: 1px solid #e8d9b3;
+    color: #6b5116;
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 0.5rem 1rem;
+  }
+  .demo-banner.show { display: block; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 2rem;
+    padding: 2rem 0 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero__main img {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    background: #ece9e1;
+  }
+  .hero__main .eyebrow { margin-top: 1rem; }
+  .hero__main h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    line-height: 1.2;
+    margin: 0.5rem 0 0.6rem;
+  }
+  .hero__main p {
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0;
+  }
+  .hero__main p::first-letter {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 3.1rem;
+    float: left;
+    line-height: 0.8;
+    padding: 0.05em 0.1em 0 0;
+    color: var(--masthead);
+  }
+  .pull-quote {
+    margin: 1.3rem 0 0;
+    padding: 0.2rem 0 0.2rem 1.1rem;
+    border-left: 3px solid var(--gold);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--ink-blue);
+    position: relative;
+  }
+  .pull-quote::before {
+    content: "\201C";
+    font-family: var(--font-display);
+    font-style: normal;
+    font-size: 2.2rem;
+    color: var(--gold);
+    position: absolute;
+    left: -0.15rem;
+    top: -0.6rem;
+  }
+  .pull-quote cite {
+    display: block;
+    margin-top: 0.4rem;
+    font-family: var(--font-body);
+    font-style: normal;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--steel);
+  }
+  .hero__side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+  .hero__side-item {
+    display: flex;
+    gap: 0.9rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero__side-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .hero__side-item img {
+    width: 88px;
+    height: 68px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #ece9e1;
+  }
+  .hero__side-item h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    line-height: 1.3;
+    margin: 0.2rem 0 0;
+  }
+
+  /* ---------- Eyebrow / category chip ---------- */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dot, var(--masthead));
+  }
+  .eyebrow::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot, var(--masthead));
+    display: inline-block;
+  }
+
+  /* ---------- Section blocks ---------- */
+  .section-block {
+    padding: 2.2rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-block__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.1rem;
+    border-left: 4px solid var(--accent, var(--masthead));
+    padding-left: 0.8rem;
+  }
+  .section-block__head h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+  }
+  .section-block__head h2::before {
+    content: "\2766";
+    font-size: 0.85rem;
+    color: var(--accent, var(--gold));
+  }
+  .section-block__head a {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent, var(--masthead));
+  }
+  .section-block__head a:hover { text-decoration: underline; }
+
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.3rem;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    border-left: 3px solid var(--accent, var(--rule));
+    padding-left: 0.9rem;
+  }
+  .card img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    background: #ece9e1;
+    margin-bottom: 0.6rem;
+  }
+  .card h3 {
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    line-height: 1.3;
+    margin: 0.3rem 0 0.35rem;
+  }
+  .card p {
+    color: var(--steel);
+    font-size: 0.85rem;
+    line-height: 1.45;
+    margin: 0 0 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card__meta {
+    margin-top: auto;
+    font-size: 0.72rem;
+    color: var(--steel);
+    display: flex;
+    justify-content: space-between;
+  }
+  .card:hover h3 { text-decoration: underline; color: var(--accent, var(--masthead)); }
+
+  .empty-state, .loading-state {
+    color: var(--steel);
+    font-size: 0.9rem;
+    padding: 1rem 0;
+  }
+
+  /* ---------- Footer ---------- */
+  footer {
+    text-align: center;
+    padding: 2rem 1.5rem 3rem;
+    color: var(--steel);
+    font-size: 0.8rem;
+  }
+  footer strong { color: var(--ink); }
+  .footer__epigraph {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--gold);
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; }
+    .card-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .card-row { grid-template-columns: 1fr; }
+    .search-input { width: 140px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="utility-bar">
+    <div class="wrap">
+      <span class="utility-bar__tagline" id="today-date"></span>
+      <input class="search-input" type="search" id="search-input" placeholder="Search stories…" aria-label="Search stories" />
+    </div>
+  </div>
+
+  <header class="masthead">
+    <div class="masthead__issue-line">
+      <span id="issue-label">Vol. I · No. 01</span>
+      <span>Est. 2026</span>
+    </div>
+    <h1>The Marks Man</h1>
+    <div class="masthead__motto">Every grade, every gathering, every campus — struck true.</div>
+    <div class="masthead__sub">Student news, exams, scholarships &amp; campus life — everything from the last 7 days</div>
+    <div class="masthead__ornament">❦</div>
+  </header>
+
+  <nav class="category-nav" aria-label="News sections">
+    <div class="wrap category-nav__list" id="category-nav"></div>
+  </nav>
+
+  <div class="demo-banner" id="demo-banner">
+    Showing sample stories — couldn't reach the news API, so this is demo data. Connect a live backend to replace it.
+  </div>
+
+  <main class="wrap">
+    <section class="hero" id="hero"></section>
+    <div id="sections"></div>
+  </main>
+
+  <footer>
+    <div class="footer__epigraph">Scripta manent — what is set down, is set down truly.</div>
+    <strong>The Marks Man</strong> — a rolling 7-day student news digest. Stories older than 7 days are automatically retired.
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // Point this at your deployed FastAPI backend.
+  const API_BASE_URL = window.API_BASE_URL || "http://localhost:8000";
+
+  const CATEGORIES = [
+    { key: "exams", label: "Exams" },
+    { key: "campus_events", label: "Campus Events" },
+    { key: "scholarships", label: "Scholarships" },
+    { key: "education_news", label: "Education News" },
+    { key: "student_news", label: "Student News" },
+    { key: "kiit_news", label: "KIIT News" },
+  ];
+
+  // Used only if the API can't be reached, so the page still previews.
+  const DEMO_ARTICLES = buildDemoArticles();
+
+  let allArticles = [];
+  let activeCategory = "all";
+  let searchTerm = "";
+
+  const el = {
+    nav: document.getElementById("category-nav"),
+    hero: document.getElementById("hero"),
+    sections: document.getElementById("sections"),
+    banner: document.getElementById("demo-banner"),
+    search: document.getElementById("search-input"),
+    date: document.getElementById("today-date"),
+  };
+
+  el.date.textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
+  const issueLabel = document.getElementById("issue-label");
+  if (issueLabel) {
+    const now = new Date();
+    issueLabel.textContent = `Vol. ${now.getFullYear() - 2025} · No. ${isoWeekNumber(now)}`;
+  }
+
+  function isoWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return String(Math.ceil(((d - yearStart) / 86400000 + 1) / 7)).padStart(2, "0");
+  }
+
+  buildNav();
+  el.search.addEventListener("input", (e) => {
+    searchTerm = e.target.value.trim().toLowerCase();
+    render();
+  });
+
+  loadArticles();
+
+  async function loadArticles() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/news?limit=100`);
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json();
+      allArticles = data.length ? data : DEMO_ARTICLES;
+      el.banner.classList.toggle("show", data.length === 0);
+    } catch (err) {
+      allArticles = DEMO_ARTICLES;
+      el.banner.classList.add("show");
+    }
+    render();
+  }
+
+  function buildNav() {
+    const makeBtn = (key, label) => {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.dataset.key = key;
+      btn.className = key === activeCategory ? "active" : "";
+      btn.addEventListener("click", () => {
+        activeCategory = key;
+        [...el.nav.children].forEach((c) => c.classList.toggle("active", c.dataset.key === key));
+        render();
+      });
+      return btn;
+    };
+    el.nav.appendChild(makeBtn("all", "All"));
+    CATEGORIES.forEach((c) => el.nav.appendChild(makeBtn(c.key, c.label)));
+  }
+
+  function filtered(list) {
+    return list.filter((a) => {
+      const matchesCategory = activeCategory === "all" || a.category === activeCategory;
+      const matchesSearch = !searchTerm || a.title.toLowerCase().includes(searchTerm);
+      return matchesCategory && matchesSearch;
+    });
+  }
+
+  function render() {
+    const visible = filtered(allArticles);
+    renderHero(visible);
+    renderSections(visible);
+  }
+
+  function renderHero(list) {
+    if (activeCategory !== "all" || searchTerm) {
+      el.hero.style.display = "none";
+      return;
+    }
+    el.hero.style.display = "";
+    const sorted = [...list].sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+    const top = sorted[0];
+    const side = sorted.slice(1, 4);
+
+    if (!top) { el.hero.innerHTML = ""; return; }
+
+    el.hero.innerHTML = `
+      <div class="hero__main">
+        <a href="${attr(top.url)}" target="_blank" rel="noreferrer">
+          <img src="${attr(top.image_url || placeholderImg(top.category))}" alt="" />
+        </a>
+        ${categoryEyebrow(top.category)}
+        <h2><a href="${attr(top.url)}" target="_blank" rel="noreferrer">${esc(top.title)}</a></h2>
+        <p>${esc(top.summary || "")}</p>
+        ${side[0] ? `
+          <blockquote class="pull-quote">
+            ${esc(firstSentence(side[0].summary || side[0].title))}
+            <cite>From ${esc(side[0].source || "the desk")}, on ${esc(categoryLabel(side[0].category))}</cite>
+          </blockquote>
+        ` : ""}
+      </div>
+      <div class="hero__side">
+        ${side.map((a) => `
+          <div class="hero__side-item">
+            <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" />
+            <div>
+              ${categoryEyebrow(a.category)}
+              <h3><a href="${attr(a.url)}" target="_blank" rel="noreferrer">${esc(a.title)}</a></h3>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderSections(list) {
+    el.sections.innerHTML = "";
+
+    const categoriesToShow = activeCategory === "all"
+      ? CATEGORIES
+      : CATEGORIES.filter((c) => c.key === activeCategory);
+
+    categoriesToShow.forEach((cat) => {
+      const items = list.filter((a) => a.category === cat.key).slice(0, activeCategory === "all" ? 4 : 100);
+
+      const block = document.createElement("section");
+      block.className = "section-block";
+      block.style.setProperty("--accent", `var(--c-${cat.key})`);
+
+      const body = items.length
+        ? `<div class="card-row">${items.map(cardHtml).join("")}</div>`
+        : `<div class="empty-state">No stories in the last 7 days for this section yet.</div>`;
+
+      block.innerHTML = `
+        <div class="section-block__head">
+          <h2>${esc(cat.label)}</h2>
+          ${activeCategory === "all" ? `<a href="#" data-key="${cat.key}" class="view-all">View all</a>` : ""}
+        </div>
+        ${body}
+      `;
+      el.sections.appendChild(block);
+    });
+
+    el.sections.querySelectorAll(".view-all").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const key = link.dataset.key;
+        activeCategory = key;
+        [...el.nav.children].forEach((c) => c.classList.toggle("active", c.dataset.key === key));
+        render();
+        window.scrollTo({ top: el.sections.offsetTop - 80, behavior: "smooth" });
+      });
+    });
+  }
+
+  function cardHtml(a) {
+    return `
+      <a class="card" href="${attr(a.url)}" target="_blank" rel="noreferrer" style="--accent: var(--c-${a.category})">
+        <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" />
+        ${categoryEyebrow(a.category)}
+        <h3>${esc(a.title)}</h3>
+        <p>${esc(a.summary || "")}</p>
+        <div class="card__meta">
+          <span>${esc(a.source || "")}</span>
+          <span>${timeAgo(a.published_at)}</span>
+        </div>
+      </a>
+    `;
+  }
+
+  function categoryEyebrow(key) {
+    const label = categoryLabel(key);
+    return `<span class="eyebrow" style="--dot: var(--c-${key})">${esc(label)}</span>`;
+  }
+
+  function categoryLabel(key) {
+    const cat = CATEGORIES.find((c) => c.key === key);
+    return cat ? cat.label : key;
+  }
+
+  function firstSentence(text) {
+    const match = String(text || "").match(/^.*?[.!?](?=\s|$)/);
+    return match ? match[0] : text;
+  }
+
+  function timeAgo(iso) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const hours = Math.floor(diffMs / 3600000);
+    if (hours < 1) return "just now";
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }
+
+  function placeholderImg(category) {
+    const colors = {
+      exams: "b3122b", campus_events: "c17a1f", scholarships: "2e6b4f",
+      education_news: "294a75", student_news: "6b3f73", kiit_news: "157a76",
+    };
+    const hex = colors[category] || "999999";
+    return `https://placehold.co/400x300/${hex}/ffffff?text=%20`;
+  }
+
+  function esc(str) {
+    return String(str || "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+  function attr(str) { return esc(str); }
+
+  function buildDemoArticles() {
+    const now = Date.now();
+    const hoursAgo = (h) => new Date(now - h * 3600000).toISOString();
+    const rows = [
+      ["exams", "Semester exam datesheet released for even semester", "The university has published the revised examination schedule; students can check hall tickets from next week.", 3],
+      ["exams", "Board announces re-evaluation window for practicals", "Applications for re-checking of practical marks open for the next ten days.", 20],
+      ["campus_events", "Annual tech fest dates announced", "This year's fest will span three days with workshops, hackathons and a flagship coding competition.", 5],
+      ["campus_events", "Cultural council opens auditions for fresher's night", "Students across departments can register for dance, music and drama auditions this week.", 30],
+      ["scholarships", "Merit-cum-means scholarship applications open", "Eligible students can apply online before the end of the month; income proof required.", 8],
+      ["scholarships", "State government internship stipend scheme launched", "A new stipend-linked internship program targets final-year engineering students.", 40],
+      ["education_news", "New national curriculum framework draft released for feedback", "The draft proposes changes to assessment patterns across higher education institutions.", 12],
+      ["education_news", "Universities to adopt common credit transfer system", "A unified credit framework aims to ease transfers between institutions.", 50],
+      ["student_news", "Student council elections schedule announced", "Nominations open this week ahead of campus-wide elections next month.", 6],
+      ["student_news", "Survey highlights rising interest in part-time freelancing", "A new student survey shows growing engagement with freelance and gig platforms.", 60],
+      ["kiit_news", "KIIT announces new AI & ML specialization track", "The university has introduced a new specialization within the CSE program starting next intake.", 4],
+      ["kiit_news", "KIIT campus placement drive begins for final years", "Multiple companies scheduled to visit campus over the coming weeks.", 26],
+    ];
+    return rows.map(([category, title, summary, hours], i) => ({
+      id: i + 1,
+      title,
+      summary,
+      url: "#",
+      source: "Demo Source",
+      category,
+      image_url: null,
+      published_at: hoursAgo(hours),
+    }));
+  }
+})();
+</script>
+</body>
+</html>
