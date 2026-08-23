@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ---------- Design tokens ---------- */
-  :root {
+  /* ---------- Design tokens & Themes ---------- */
+  :root, [data-theme="newsprint"] {
     --paper: #faf9f6;
     --paper-raised: #ffffff;
     --ink: #171717;
@@ -21,16 +21,62 @@
     --gold: #b8872b;
     --ink-blue: #1f3a5f;
 
-    /* per-category accents — the one deliberate signature of this design */
+    /* per-category accents */
     --c-exams: #b3122b;
     --c-campus_events: #c17a1f;
     --c-scholarships: #2e6b4f;
     --c-education_news: #294a75;
     --c-student_news: #6b3f73;
     --c-kiit_news: #157a76;
+    --c-bengal_news: #c84b31;
+    --c-saved: #b8872b;
 
     --font-display: "Source Serif 4", Georgia, serif;
     --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  [data-theme="dark"] {
+    --paper: #121418;
+    --paper-raised: #1c2128;
+    --ink: #f0f2f5;
+    --ink-soft: #c9d1d9;
+    --steel: #8b949e;
+    --rule: #30363d;
+    --masthead: #e63946;
+    --masthead-dark: #b3122b;
+    --gold: #d4a347;
+    --ink-blue: #79a8e0;
+
+    --c-exams: #e63946;
+    --c-campus_events: #f4a261;
+    --c-scholarships: #52b788;
+    --c-education_news: #5390d9;
+    --c-student_news: #a06cd5;
+    --c-kiit_news: #2ec4b6;
+    --c-bengal_news: #ff6b4a;
+    --c-saved: #e9c46a;
+  }
+
+  [data-theme="sepia"] {
+    --paper: #f4eedb;
+    --paper-raised: #fcf8ee;
+    --ink: #2b231d;
+    --ink-soft: #4a3d34;
+    --steel: #7b6f65;
+    --rule: #ded3be;
+    --masthead: #8c1d28;
+    --masthead-dark: #661019;
+    --gold: #9e6f20;
+    --ink-blue: #23456b;
+
+    --c-exams: #8c1d28;
+    --c-campus_events: #a66212;
+    --c-scholarships: #23543d;
+    --c-education_news: #1f3b60;
+    --c-student_news: #55315b;
+    --c-kiit_news: #10625f;
+    --c-bengal_news: #9e3620;
+    --c-saved: #9e6f20;
   }
 
   * { box-sizing: border-box; }
@@ -42,14 +88,17 @@
     color: var(--ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    transition: background 0.2s ease, color 0.2s ease;
   }
 
   a { color: inherit; text-decoration: none; }
 
   .wrap {
     max-width: 1180px;
+    width: 100%;
     margin: 0 auto;
     padding: 0 1.5rem;
+    overflow-x: clip;
   }
 
   /* ---------- Utility bar ---------- */
@@ -67,20 +116,136 @@
     flex-wrap: wrap;
   }
   .utility-bar__tagline { letter-spacing: 0.02em; }
+  .search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
   .search-input {
     border: 1px solid var(--rule);
     background: var(--paper-raised);
     border-radius: 999px;
-    padding: 0.4rem 0.9rem;
+    padding: 0.4rem 2rem 0.4rem 0.9rem;
     font-family: var(--font-body);
     font-size: 0.82rem;
     color: var(--ink);
     width: 220px;
     max-width: 45vw;
+    transition: border-color 0.15s ease;
   }
   .search-input:focus {
     outline: 2px solid var(--masthead);
     outline-offset: 1px;
+  }
+  .search-clear {
+    position: absolute;
+    right: 0.6rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--steel);
+    display: none;
+    padding: 0.2rem;
+  }
+  .search-clear.visible { display: block; }
+  .utility-bar__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+  .util-btn {
+    all: unset;
+    cursor: pointer;
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .util-btn:hover {
+    background: var(--masthead);
+    color: #fff;
+    border-color: var(--masthead);
+  }
+  .util-btn.syncing {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .mark-highlight {
+    background: color-mix(in srgb, var(--gold) 35%, transparent);
+    color: inherit;
+    padding: 0 0.15em;
+    border-radius: 2px;
+  }
+
+  /* Bookmark buttons */
+  .card__bookmark-btn {
+    all: unset;
+    cursor: pointer;
+    color: var(--steel);
+    font-size: 1rem;
+    padding: 0.2rem 0.3rem;
+    border-radius: 4px;
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+  .card__bookmark-btn:hover {
+    color: var(--gold);
+    transform: scale(1.15);
+  }
+  .card__bookmark-btn.active {
+    color: var(--gold);
+  }
+
+  .read-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--steel);
+    background: color-mix(in srgb, var(--steel) 12%, var(--paper));
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+  }
+  .modal__nlp-section {
+    margin: 1.2rem 0;
+    padding: 0.9rem;
+    background: color-mix(in srgb, var(--accent, var(--masthead)) 6%, var(--paper));
+    border-radius: 6px;
+    border: 1px dashed color-mix(in srgb, var(--accent, var(--masthead)) 30%, transparent);
+  }
+  .modal__nlp-buttons {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+  .nlp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-body);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    background: var(--paper-raised);
+    color: var(--accent, var(--masthead));
+    border: 1px solid color-mix(in srgb, var(--accent, var(--masthead)) 35%, transparent);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .nlp-btn:hover {
+    background: var(--accent, var(--masthead));
+    color: #fff;
   }
 
   /* ---------- Masthead ---------- */
@@ -326,14 +491,17 @@
 
   .card-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.3rem;
+    width: 100%;
   }
   .card {
     display: flex;
     flex-direction: column;
     border-left: 3px solid var(--accent, var(--rule));
     padding-left: 0.9rem;
+    min-width: 0;
+    overflow: hidden;
   }
   .card img {
     width: 100%;
@@ -341,12 +509,15 @@
     object-fit: cover;
     background: #ece9e1;
     margin-bottom: 0.6rem;
+    border-radius: 2px;
   }
   .card h3 {
     font-family: var(--font-display);
     font-size: 1.02rem;
     line-height: 1.3;
     margin: 0.3rem 0 0.35rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .card p {
     color: var(--steel);
@@ -357,6 +528,8 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .card__meta {
     margin-top: auto;
@@ -364,6 +537,8 @@
     color: var(--steel);
     display: flex;
     justify-content: space-between;
+    gap: 0.5rem;
+    overflow: hidden;
   }
   .card:hover h3 { text-decoration: underline; color: var(--accent, var(--masthead)); }
 
@@ -389,7 +564,164 @@
     margin-bottom: 0.6rem;
   }
 
-  /* ---------- Responsive ---------- */
+  /* ---------- Insights popup ---------- */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(23, 23, 23, 0.55);
+    z-index: 100;
+    padding: 5vh 1.2rem;
+    overflow-y: auto;
+  }
+  .modal-backdrop.open { display: block; }
+
+  .modal {
+    background: var(--paper-raised);
+    max-width: 620px;
+    margin: 0 auto;
+    border-radius: 4px;
+    border-top: 5px solid var(--accent, var(--masthead));
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    padding: 2rem 2rem 1.8rem;
+    position: relative;
+  }
+  .modal__close {
+    all: unset;
+    position: absolute;
+    top: 0.9rem;
+    right: 1.1rem;
+    cursor: pointer;
+    font-size: 1.3rem;
+    color: var(--steel);
+    line-height: 1;
+    padding: 0.2rem 0.4rem;
+  }
+  .modal__close:hover { color: var(--ink); }
+
+  .modal__eyebrow-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+  .modal__title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1.3;
+    margin: 0 0 0.4rem;
+  }
+  .modal__meta {
+    font-size: 0.78rem;
+    color: var(--steel);
+    margin-bottom: 1.2rem;
+  }
+  .modal__section-label {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+  .modal__summary {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    margin: 0 0 1.3rem;
+  }
+  .modal__summary::first-letter {
+    font-weight: 700;
+    font-size: 1.7rem;
+    color: var(--accent, var(--masthead));
+  }
+  .modal__keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 1.4rem;
+  }
+  .keyword-chip {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent, var(--masthead)) 12%, var(--paper));
+    color: var(--accent, var(--masthead));
+    border: 1px solid color-mix(in srgb, var(--accent, var(--masthead)) 35%, transparent);
+  }
+  .modal__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .modal__read-link {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent, var(--masthead));
+  }
+  .modal__read-link:hover { text-decoration: underline; }
+  .modal__note {
+    font-size: 0.72rem;
+    color: var(--steel);
+    font-style: italic;
+  }
+  .modal__loading {
+    color: var(--steel);
+    font-size: 0.92rem;
+    font-style: italic;
+    padding: 1rem 0 1.6rem;
+  }
+  .modal__error {
+    color: #a3311c;
+    font-size: 0.88rem;
+    padding: 0.5rem 0 1.4rem;
+  }
+
+  .modal__toolbar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .modal-action-btn {
+    all: unset;
+    cursor: pointer;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .modal-action-btn:hover {
+    background: var(--paper-raised);
+    border-color: var(--accent, var(--masthead));
+    color: var(--accent, var(--masthead));
+  }
+  .modal-action-btn.active {
+    background: var(--accent, var(--masthead));
+    color: #fff;
+    border-color: var(--accent, var(--masthead));
+  }
+
+  @media (max-width: 520px) {
+    .modal { padding: 1.6rem 1.3rem 1.4rem; }
+  }
   @media (max-width: 860px) {
     .hero { grid-template-columns: 1fr; }
     .card-row { grid-template-columns: repeat(2, 1fr); }
@@ -402,6 +734,22 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
   }
+
+  /* ---------- Physical Newspaper Print Stylesheet ---------- */
+  @media print {
+    body { background: #fff !important; color: #000 !important; font-size: 10.5pt; font-family: Georgia, serif; }
+    .utility-bar, .category-nav, .demo-banner, .modal-backdrop, .util-btn, .card__bookmark-btn, .modal__toolbar, .modal__nlp-section { display: none !important; }
+    .wrap { max-width: 100% !important; padding: 0 !important; }
+    .masthead { border-bottom: 2pt solid #000 !important; padding: 0 0 10pt !important; text-align: center; }
+    .masthead h1 { font-size: 28pt !important; }
+    .card-row { display: block !important; }
+    .card { page-break-inside: avoid; margin-bottom: 12pt; border-left: 2pt solid #000 !important; padding-left: 8pt; }
+    .card img, .hero img { display: none !important; }
+    .section-block { padding: 12pt 0 !important; page-break-inside: avoid; }
+    .section-block__head { border-left-color: #000 !important; }
+    .pull-quote { border-left-color: #000 !important; color: #000 !important; }
+    a { color: #000 !important; text-decoration: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -409,7 +757,15 @@
   <div class="utility-bar">
     <div class="wrap">
       <span class="utility-bar__tagline" id="today-date"></span>
-      <input class="search-input" type="search" id="search-input" placeholder="Search stories…" aria-label="Search stories" />
+      <div class="utility-bar__controls">
+        <button class="util-btn" id="theme-toggle-btn" title="Switch Theme (Newsprint / Sepia / Night Edition)">🗞️ Theme</button>
+        <button class="util-btn" id="print-btn" title="Print physical newspaper digest">🖨️ Print</button>
+        <button class="util-btn" id="sync-btn" title="Fetch latest stories from news sources">↻ Sync News</button>
+        <div class="search-wrapper">
+          <input class="search-input" type="search" id="search-input" placeholder="Search stories…" aria-label="Search stories" />
+          <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search">✕</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -420,7 +776,7 @@
     </div>
     <h1>The Marks Man</h1>
     <div class="masthead__motto">Every grade, every gathering, every campus — struck true.</div>
-    <div class="masthead__sub">Student news, exams, scholarships &amp; campus life — everything from the last 7 days</div>
+    <div class="masthead__sub">Student news, exams, scholarships &amp; campus life — updated continuously across all campuses</div>
     <div class="masthead__ornament">❦</div>
   </header>
 
@@ -439,15 +795,25 @@
 
   <footer>
     <div class="footer__epigraph">Scripta manent — what is set down, is set down truly.</div>
-    <strong>The Marks Man</strong> — a rolling 7-day student news digest. Stories older than 7 days are automatically retired.
+    <strong>The Marks Man</strong> — a rolling 30-day student news digest. Stories older than 30 days are automatically retired.
   </footer>
+
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal__close" id="modal-close" aria-label="Close">&times;</button>
+      <div class="modal__eyebrow-row" id="modal-eyebrow-row"></div>
+      <h2 class="modal__title" id="modal-title"></h2>
+      <div class="modal__meta" id="modal-meta"></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
 
 <script>
 (function () {
   "use strict";
 
-  // Point this at your deployed FastAPI backend.
-  const API_BASE_URL = window.API_BASE_URL || "http://localhost:8000";
+  // Point this at your deployed FastAPI backend. Auto-detects origin if served from FastAPI directly.
+  const API_BASE_URL = window.API_BASE_URL || (window.location.protocol.startsWith("http") ? window.location.origin : "http://localhost:8000");
 
   const CATEGORIES = [
     { key: "exams", label: "Exams" },
@@ -456,6 +822,13 @@
     { key: "education_news", label: "Education News" },
     { key: "student_news", label: "Student News" },
     { key: "kiit_news", label: "KIIT News" },
+    { key: "bengal_news", label: "Bengal News" },
+  ];
+
+  const THEMES = [
+    { id: "newsprint", label: "🗞️ Newsprint" },
+    { id: "sepia", label: "📜 Sepia" },
+    { id: "dark", label: "🌙 Night" }
   ];
 
   // Used only if the API can't be reached, so the page still previews.
@@ -464,6 +837,17 @@
   let allArticles = [];
   let activeCategory = "all";
   let searchTerm = "";
+  let currentThemeIndex = 0;
+  let activeUtterance = null;
+
+  // Bookmarks loaded from localStorage
+  let bookmarks = new Set();
+  try {
+    const saved = JSON.parse(localStorage.getItem("marksman_bookmarks") || "[]");
+    bookmarks = new Set(saved.map(String));
+  } catch (e) {
+    bookmarks = new Set();
+  }
 
   const el = {
     nav: document.getElementById("category-nav"),
@@ -471,8 +855,49 @@
     sections: document.getElementById("sections"),
     banner: document.getElementById("demo-banner"),
     search: document.getElementById("search-input"),
+    searchClear: document.getElementById("search-clear"),
+    syncBtn: document.getElementById("sync-btn"),
+    themeBtn: document.getElementById("theme-toggle-btn"),
+    printBtn: document.getElementById("print-btn"),
     date: document.getElementById("today-date"),
+    modalBackdrop: document.getElementById("modal-backdrop"),
+    modal: document.getElementById("modal"),
+    modalClose: document.getElementById("modal-close"),
+    modalEyebrowRow: document.getElementById("modal-eyebrow-row"),
+    modalTitle: document.getElementById("modal-title"),
+    modalMeta: document.getElementById("modal-meta"),
+    modalBody: document.getElementById("modal-body"),
   };
+
+  const articlesById = new Map();
+
+  // Initialize theme
+  const savedTheme = localStorage.getItem("marksman_theme") || "newsprint";
+  const foundThemeIdx = THEMES.findIndex(t => t.id === savedTheme);
+  currentThemeIndex = foundThemeIdx >= 0 ? foundThemeIdx : 0;
+  applyTheme(THEMES[currentThemeIndex].id);
+
+  if (el.themeBtn) {
+    el.themeBtn.addEventListener("click", () => {
+      currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
+      const theme = THEMES[currentThemeIndex];
+      applyTheme(theme.id);
+      localStorage.setItem("marksman_theme", theme.id);
+    });
+  }
+
+  function applyTheme(themeId) {
+    document.documentElement.setAttribute("data-theme", themeId);
+    if (el.themeBtn) {
+      el.themeBtn.textContent = THEMES.find(t => t.id === themeId)?.label || "🗞️ Theme";
+    }
+  }
+
+  if (el.printBtn) {
+    el.printBtn.addEventListener("click", () => {
+      window.print();
+    });
+  }
 
   el.date.textContent = new Date().toLocaleDateString(undefined, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -492,16 +917,73 @@
   }
 
   buildNav();
+
+  if (el.syncBtn) {
+    el.syncBtn.addEventListener("click", async () => {
+      el.syncBtn.classList.add("syncing");
+      el.syncBtn.textContent = "Syncing…";
+      try {
+        await fetch(`${API_BASE_URL}/internal/refresh`, {
+          method: "POST",
+          headers: { "x-refresh-token": "change-me" },
+        });
+        await loadArticles();
+      } catch (err) {
+        console.warn("Manual sync error:", err);
+      } finally {
+        el.syncBtn.classList.remove("syncing");
+        el.syncBtn.textContent = "↻ Sync News";
+      }
+    });
+  }
+
   el.search.addEventListener("input", (e) => {
     searchTerm = e.target.value.trim().toLowerCase();
+    el.searchClear.classList.toggle("visible", Boolean(searchTerm));
     render();
+  });
+
+  if (el.searchClear) {
+    el.searchClear.addEventListener("click", () => {
+      el.search.value = "";
+      searchTerm = "";
+      el.searchClear.classList.remove("visible");
+      render();
+      el.search.focus();
+    });
+  }
+
+  document.addEventListener("click", (e) => {
+    // Handle bookmark button click
+    const bookmarkBtn = e.target.closest(".js-bookmark-btn");
+    if (bookmarkBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = String(bookmarkBtn.dataset.id);
+      toggleBookmark(id);
+      return;
+    }
+
+    const link = e.target.closest(".js-headline");
+    if (!link) return;
+    e.preventDefault();
+    const article = articlesById.get(String(link.dataset.id));
+    if (article) openModal(article);
+  });
+
+  el.modalClose.addEventListener("click", closeModal);
+  el.modalBackdrop.addEventListener("click", (e) => {
+    if (e.target === el.modalBackdrop) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && el.modalBackdrop.classList.contains("open")) closeModal();
   });
 
   loadArticles();
 
   async function loadArticles() {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/news?limit=100`);
+      const res = await fetch(`${API_BASE_URL}/api/news?limit=300`);
       if (!res.ok) throw new Error("bad response");
       const data = await res.json();
       allArticles = data.length ? data : DEMO_ARTICLES;
@@ -513,33 +995,84 @@
     render();
   }
 
+  async function selectCategory(key) {
+    activeCategory = key;
+    [...el.nav.children].forEach((c) => c.classList.toggle("active", c.dataset.key === key));
+
+    if (key !== "all" && key !== "saved") {
+      const existingForCat = allArticles.filter((a) => a.category === key);
+      if (existingForCat.length < 20) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/news?category=${key}&limit=60`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length) {
+              const currentIds = new Set(allArticles.map((a) => String(a.id)));
+              data.forEach((item) => {
+                if (!currentIds.has(String(item.id))) {
+                  allArticles.push(item);
+                }
+                articlesById.set(String(item.id), item);
+              });
+            }
+          }
+        } catch (e) {}
+      }
+    }
+    render();
+  }
+
+  function toggleBookmark(id) {
+    if (bookmarks.has(id)) {
+      bookmarks.delete(id);
+    } else {
+      bookmarks.add(id);
+    }
+    try {
+      localStorage.setItem("marksman_bookmarks", JSON.stringify([...bookmarks]));
+    } catch (e) {}
+
+    updateBookmarkBadges();
+    render();
+  }
+
+  function updateBookmarkBadges() {
+    const savedBadge = document.getElementById("saved-count");
+    if (savedBadge) {
+      savedBadge.textContent = String(bookmarks.size);
+    }
+  }
+
   function buildNav() {
-    const makeBtn = (key, label) => {
+    el.nav.innerHTML = "";
+    const makeBtn = (key, label, badgeCount = null) => {
       const btn = document.createElement("button");
-      btn.textContent = label;
+      btn.innerHTML = badgeCount !== null ? `${label} <span id="saved-count">${badgeCount}</span>` : label;
       btn.dataset.key = key;
       btn.className = key === activeCategory ? "active" : "";
-      btn.addEventListener("click", () => {
-        activeCategory = key;
-        [...el.nav.children].forEach((c) => c.classList.toggle("active", c.dataset.key === key));
-        render();
-      });
+      btn.addEventListener("click", () => selectCategory(key));
       return btn;
     };
+
     el.nav.appendChild(makeBtn("all", "All"));
     CATEGORIES.forEach((c) => el.nav.appendChild(makeBtn(c.key, c.label)));
+    el.nav.appendChild(makeBtn("saved", "⭐ Saved", bookmarks.size));
   }
 
   function filtered(list) {
     return list.filter((a) => {
-      const matchesCategory = activeCategory === "all" || a.category === activeCategory;
-      const matchesSearch = !searchTerm || a.title.toLowerCase().includes(searchTerm);
-      return matchesCategory && matchesSearch;
+      const isSavedMatch = activeCategory === "saved" ? bookmarks.has(String(a.id)) : true;
+      const matchesCategory = activeCategory === "all" || activeCategory === "saved" || a.category === activeCategory;
+      const matchesSearch = !searchTerm || (a.title && a.title.toLowerCase().includes(searchTerm)) || (a.summary && a.summary.toLowerCase().includes(searchTerm));
+      return isSavedMatch && matchesCategory && matchesSearch;
     });
   }
 
   function render() {
     const visible = filtered(allArticles);
+    allArticles.forEach((a) => articlesById.set(String(a.id), a));
+    DEMO_ARTICLES.forEach((a) => articlesById.set(String(a.id), a));
+    updateBookmarkBadges();
     renderHero(visible);
     renderSections(visible);
   }
@@ -556,37 +1089,75 @@
 
     if (!top) { el.hero.innerHTML = ""; return; }
 
+    const isBookmarked = bookmarks.has(String(top.id));
+    const readTime = estimateReadTime(top.summary || top.title);
+
     el.hero.innerHTML = `
       <div class="hero__main">
-        <a href="${attr(top.url)}" target="_blank" rel="noreferrer">
-          <img src="${attr(top.image_url || placeholderImg(top.category))}" alt="" />
+        <a href="${attr(top.url)}" class="js-headline" data-id="${top.id}">
+          <img src="${attr(top.image_url || placeholderImg(top.category))}" alt="" onerror="this.onerror=null;this.src='${placeholderImg(top.category)}';" />
         </a>
-        ${categoryEyebrow(top.category)}
-        <h2><a href="${attr(top.url)}" target="_blank" rel="noreferrer">${esc(top.title)}</a></h2>
-        <p>${esc(top.summary || "")}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+          ${categoryEyebrow(top.category)}
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="read-badge">${esc(readTime)}</span>
+            <button class="card__bookmark-btn js-bookmark-btn ${isBookmarked ? "active" : ""}" data-id="${top.id}" title="${isBookmarked ? "Remove Bookmark" : "Save Article"}">
+              ${isBookmarked ? "★" : "☆"}
+            </button>
+          </div>
+        </div>
+        <h2><a href="${attr(top.url)}" class="js-headline" data-id="${top.id}">${highlight(top.title, searchTerm)}</a></h2>
+        <p>${highlight(top.summary || "", searchTerm)}</p>
         ${side[0] ? `
           <blockquote class="pull-quote">
-            ${esc(firstSentence(side[0].summary || side[0].title))}
+            ${highlight(firstSentence(side[0].summary || side[0].title), searchTerm)}
             <cite>From ${esc(side[0].source || "the desk")}, on ${esc(categoryLabel(side[0].category))}</cite>
           </blockquote>
         ` : ""}
       </div>
       <div class="hero__side">
-        ${side.map((a) => `
-          <div class="hero__side-item">
-            <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" />
-            <div>
-              ${categoryEyebrow(a.category)}
-              <h3><a href="${attr(a.url)}" target="_blank" rel="noreferrer">${esc(a.title)}</a></h3>
+        ${side.map((a) => {
+          const sideBookmarked = bookmarks.has(String(a.id));
+          return `
+            <div class="hero__side-item">
+              <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" onerror="this.onerror=null;this.src='${placeholderImg(a.category)}';" />
+              <div style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  ${categoryEyebrow(a.category)}
+                  <button class="card__bookmark-btn js-bookmark-btn ${sideBookmarked ? "active" : ""}" data-id="${a.id}" title="${sideBookmarked ? "Remove Bookmark" : "Save Article"}">
+                    ${sideBookmarked ? "★" : "☆"}
+                  </button>
+                </div>
+                <h3><a href="${attr(a.url)}" class="js-headline" data-id="${a.id}">${highlight(a.title, searchTerm)}</a></h3>
+              </div>
             </div>
-          </div>
-        `).join("")}
+          `;
+        }).join("")}
       </div>
     `;
   }
 
   function renderSections(list) {
     el.sections.innerHTML = "";
+
+    if (activeCategory === "saved") {
+      const block = document.createElement("section");
+      block.className = "section-block";
+      block.style.setProperty("--accent", `var(--c-saved)`);
+
+      const body = list.length
+        ? `<div class="card-row">${list.map(cardHtml).join("")}</div>`
+        : `<div class="empty-state">No saved stories yet. Click the ☆ icon on any article to bookmark it for later reading.</div>`;
+
+      block.innerHTML = `
+        <div class="section-block__head">
+          <h2>⭐ Saved Stories (${list.length})</h2>
+        </div>
+        ${body}
+      `;
+      el.sections.appendChild(block);
+      return;
+    }
 
     const categoriesToShow = activeCategory === "all"
       ? CATEGORIES
@@ -601,7 +1172,7 @@
 
       const body = items.length
         ? `<div class="card-row">${items.map(cardHtml).join("")}</div>`
-        : `<div class="empty-state">No stories in the last 7 days for this section yet.</div>`;
+        : `<div class="empty-state">No stories found in the last 30 days for this section.</div>`;
 
       block.innerHTML = `
         <div class="section-block__head">
@@ -617,26 +1188,34 @@
       link.addEventListener("click", (e) => {
         e.preventDefault();
         const key = link.dataset.key;
-        activeCategory = key;
-        [...el.nav.children].forEach((c) => c.classList.toggle("active", c.dataset.key === key));
-        render();
+        selectCategory(key);
         window.scrollTo({ top: el.sections.offsetTop - 80, behavior: "smooth" });
       });
     });
   }
 
   function cardHtml(a) {
+    const isBookmarked = bookmarks.has(String(a.id));
+    const readTime = estimateReadTime(a.summary || a.title);
+
     return `
-      <a class="card" href="${attr(a.url)}" target="_blank" rel="noreferrer" style="--accent: var(--c-${a.category})">
-        <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" />
-        ${categoryEyebrow(a.category)}
-        <h3>${esc(a.title)}</h3>
-        <p>${esc(a.summary || "")}</p>
+      <div class="card" style="--accent: var(--c-${a.category})">
+        <a href="${attr(a.url)}" class="js-headline" data-id="${a.id}">
+          <img src="${attr(a.image_url || placeholderImg(a.category))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${placeholderImg(a.category)}';" />
+        </a>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          ${categoryEyebrow(a.category)}
+          <button class="card__bookmark-btn js-bookmark-btn ${isBookmarked ? "active" : ""}" data-id="${a.id}" title="${isBookmarked ? "Remove Bookmark" : "Save Article"}">
+            ${isBookmarked ? "★" : "☆"}
+          </button>
+        </div>
+        <h3><a class="js-headline" href="${attr(a.url)}" data-id="${a.id}">${highlight(a.title, searchTerm)}</a></h3>
+        <p>${highlight(a.summary || "", searchTerm)}</p>
         <div class="card__meta">
-          <span>${esc(a.source || "")}</span>
+          <span>${esc(a.source || "")} · <span class="read-badge">${esc(readTime)}</span></span>
           <span>${timeAgo(a.published_at)}</span>
         </div>
-      </a>
+      </div>
     `;
   }
 
@@ -655,6 +1234,191 @@
     return match ? match[0] : text;
   }
 
+  function estimateReadTime(text) {
+    const words = String(text || "").trim().split(/\s+/).length;
+    const mins = Math.max(1, Math.round(words / 150));
+    return `${mins}m read`;
+  }
+
+  function highlight(text, term) {
+    if (!term || !text) return esc(text || "");
+    const safeText = esc(text);
+    const safeTerm = esc(term);
+    const regex = new RegExp(`(${safeTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+    return safeText.replace(regex, `<mark class="mark-highlight">$1</mark>`);
+  }
+
+  function openModal(article) {
+    stopSpeech();
+    el.modal.style.setProperty("--accent", `var(--c-${article.category})`);
+    el.modalEyebrowRow.innerHTML = categoryEyebrow(article.category);
+    el.modalTitle.textContent = article.title;
+    el.modalMeta.textContent = `${article.source || "Unknown source"} · ${timeAgo(article.published_at)} · ${estimateReadTime(article.summary || article.title)}`;
+    el.modalBody.innerHTML = `<div class="modal__loading">Reading between the lines…</div>`;
+    el.modalBackdrop.classList.add("open");
+    document.body.style.overflow = "hidden";
+
+    fetchInsights(article)
+      .then((insights) => renderModalBody(article, insights))
+      .catch(() => renderModalBody(article, buildFallbackInsights(article), true));
+  }
+
+  function closeModal() {
+    stopSpeech();
+    el.modalBackdrop.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  function stopSpeech() {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  async function fetchInsights(article) {
+    if (article.url === "#") {
+      return buildFallbackInsights(article);
+    }
+    const res = await fetch(`${API_BASE_URL}/api/articles/${article.id}/insights`);
+    if (!res.ok) throw new Error("insights request failed");
+    return res.json();
+  }
+
+  function buildFallbackInsights(article) {
+    const source = article.summary || article.title || "";
+    return {
+      summary: source,
+      keywords: guessKeywords(article.title + " " + (article.summary || "")),
+      source: "demo",
+    };
+  }
+
+  function guessKeywords(text) {
+    const stop = new Set(["the","a","an","of","in","on","for","to","and","with","from","new","this","that","is","are","by","at"]);
+    const counts = {};
+    String(text || "").toLowerCase().match(/[a-z]{4,}/g)?.forEach((w) => {
+      if (stop.has(w)) return;
+      counts[w] = (counts[w] || 0) + 1;
+    });
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 6);
+  }
+
+  function renderModalBody(article, insights, isFallback = false) {
+    if (!insights || (!insights.summary && (!insights.keywords || !insights.keywords.length))) {
+      el.modalBody.innerHTML = `<div class="modal__error">Couldn't generate a summary for this story right now.</div>
+        ${readLinkHtml(article)}`;
+      return;
+    }
+
+    const isBookmarked = bookmarks.has(String(article.id));
+    const noteText = insights.source === "demo"
+      ? "Demo data — connect the backend for real NLP-generated summaries."
+      : insights.source === "fallback"
+        ? "Generated from the article preview (full text wasn't reachable)."
+        : "Generated with extractive TextRank summarization + YAKE keyphrase extraction.";
+
+    const nlpLinks = article.url && article.url !== "#" ? `
+      <div class="modal__nlp-section">
+        <div class="modal__section-label">Linguistic NLP Visualizers</div>
+        <div class="modal__nlp-buttons">
+          <a class="nlp-btn" href="${API_BASE_URL}/api/articles/${article.id}/visualize?style=ent" target="_blank" rel="noreferrer">🏷️ Named Entities (NER)</a>
+          <a class="nlp-btn" href="${API_BASE_URL}/api/articles/${article.id}/visualize?style=dep" target="_blank" rel="noreferrer">🌲 Syntax Dependency Tree</a>
+        </div>
+      </div>
+    ` : "";
+
+    el.modalBody.innerHTML = `
+      <div class="modal__toolbar">
+        <button class="modal-action-btn" id="modal-audio-btn">🔊 Listen</button>
+        <button class="modal-action-btn ${isBookmarked ? "active" : ""}" id="modal-bookmark-btn">
+          ${isBookmarked ? "★ Saved" : "☆ Save Story"}
+        </button>
+        <button class="modal-action-btn" id="modal-share-btn">📋 Share Brief</button>
+      </div>
+
+      <div class="modal__section-label">AI Summary</div>
+      <p class="modal__summary">${esc(insights.summary)}</p>
+
+      ${insights.keywords && insights.keywords.length ? `
+        <div class="modal__section-label">Key Terms</div>
+        <div class="modal__keywords">
+          ${insights.keywords.map((k) => `<span class="keyword-chip">${esc(k)}</span>`).join("")}
+        </div>
+      ` : ""}
+
+      ${nlpLinks}
+
+      <div class="modal__footer">
+        ${readLinkHtml(article)}
+        <span class="modal__note">${esc(noteText)}</span>
+      </div>
+    `;
+
+    // Modal Toolbar Handlers
+    const audioBtn = document.getElementById("modal-audio-btn");
+    if (audioBtn && "speechSynthesis" in window) {
+      let isSpeaking = false;
+      audioBtn.addEventListener("click", () => {
+        if (isSpeaking) {
+          window.speechSynthesis.cancel();
+          isSpeaking = false;
+          audioBtn.textContent = "🔊 Listen";
+          audioBtn.classList.remove("active");
+        } else {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(insights.summary);
+          utterance.rate = 0.95;
+          utterance.onend = () => {
+            isSpeaking = false;
+            audioBtn.textContent = "🔊 Listen";
+            audioBtn.classList.remove("active");
+          };
+          utterance.onerror = () => {
+            isSpeaking = false;
+            audioBtn.textContent = "🔊 Listen";
+            audioBtn.classList.remove("active");
+          };
+          window.speechSynthesis.speak(utterance);
+          isSpeaking = true;
+          audioBtn.textContent = "⏹️ Stop";
+          audioBtn.classList.add("active");
+        }
+      });
+    }
+
+    const modalBookmarkBtn = document.getElementById("modal-bookmark-btn");
+    if (modalBookmarkBtn) {
+      modalBookmarkBtn.addEventListener("click", () => {
+        toggleBookmark(String(article.id));
+        const nowBookmarked = bookmarks.has(String(article.id));
+        modalBookmarkBtn.classList.toggle("active", nowBookmarked);
+        modalBookmarkBtn.textContent = nowBookmarked ? "★ Saved" : "☆ Save Story";
+      });
+    }
+
+    const shareBtn = document.getElementById("modal-share-btn");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", async () => {
+        const shareText = `📰 ${article.title}\n\n📝 AI Brief:\n${insights.summary}\n\n🔗 ${article.url !== "#" ? article.url : "The Marks Man"}`;
+        try {
+          if (navigator.clipboard) {
+            await navigator.clipboard.writeText(shareText);
+            shareBtn.textContent = "✓ Copied!";
+            setTimeout(() => { shareBtn.textContent = "📋 Share Brief"; }, 2000);
+          }
+        } catch (e) {
+          console.warn("Clipboard copy failed:", e);
+        }
+      });
+    }
+  }
+
+  function readLinkHtml(article) {
+    return article.url && article.url !== "#"
+      ? `<a class="modal__read-link" href="${attr(article.url)}" target="_blank" rel="noreferrer">Read full article ↗</a>`
+      : `<span class="modal__note">No live source link for this demo story.</span>`;
+  }
+
   function timeAgo(iso) {
     const diffMs = Date.now() - new Date(iso).getTime();
     const hours = Math.floor(diffMs / 3600000);
@@ -664,12 +1428,19 @@
   }
 
   function placeholderImg(category) {
-    const colors = {
-      exams: "b3122b", campus_events: "c17a1f", scholarships: "2e6b4f",
-      education_news: "294a75", student_news: "6b3f73", kiit_news: "157a76",
+    const meta = {
+      exams: { bg1: "#7a0c1d", bg2: "#b3122b", label: "EXAMS", icon: "📝" },
+      campus_events: { bg1: "#8a4f10", bg2: "#c17a1f", label: "EVENTS", icon: "🎪" },
+      scholarships: { bg1: "#1d4734", bg2: "#2e6b4f", label: "SCHOLARSHIPS", icon: "💰" },
+      education_news: { bg1: "#182f4d", bg2: "#294a75", label: "EDUCATION", icon: "🎓" },
+      student_news: { bg1: "#47284d", bg2: "#6b3f73", label: "CAMPUS LIFE", icon: "📰" },
+      kiit_news: { bg1: "#0e5250", bg2: "#157a76", label: "KIIT NEWS", icon: "🏛️" },
+      bengal_news: { bg1: "#8c2815", bg2: "#c84b31", label: "BENGAL NEWS", icon: "🐅" },
+      saved: { bg1: "#7a591a", bg2: "#b8872b", label: "SAVED", icon: "⭐" },
     };
-    const hex = colors[category] || "999999";
-    return `https://placehold.co/400x300/${hex}/ffffff?text=%20`;
+    const c = meta[category] || { bg1: "#2b2b2b", bg2: "#4a4a4a", label: "NEWS", icon: "🗞️" };
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><defs><linearGradient id="g_${category}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c.bg1}"/><stop offset="100%" stop-color="${c.bg2}"/></linearGradient><pattern id="p_${category}" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M 16 0 L 0 16 M 0 0 L 16 16" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/></pattern></defs><rect width="400" height="240" fill="url(#g_${category})"/><rect width="400" height="240" fill="url(#p_${category})"/><circle cx="200" cy="96" r="38" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/><text x="200" y="108" font-size="32" text-anchor="middle" font-family="sans-serif">${c.icon}</text><rect x="70" y="160" width="260" height="28" rx="14" fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><text x="200" y="178" font-size="11" font-weight="700" letter-spacing="2" fill="#ffffff" text-anchor="middle" font-family="'Inter', -apple-system, sans-serif">${c.label}</text></svg>`;
+    return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
   }
 
   function esc(str) {
@@ -695,6 +1466,8 @@
       ["student_news", "Survey highlights rising interest in part-time freelancing", "A new student survey shows growing engagement with freelance and gig platforms.", 60],
       ["kiit_news", "KIIT announces new AI & ML specialization track", "The university has introduced a new specialization within the CSE program starting next intake.", 4],
       ["kiit_news", "KIIT campus placement drive begins for final years", "Multiple companies scheduled to visit campus over the coming weeks.", 26],
+      ["bengal_news", "Kolkata colleges introduce unified admission counselling portal", "Undergraduate admission procedures across West Bengal universities streamlined under a single digital window.", 2],
+      ["bengal_news", "West Bengal state scholarship distribution begins for higher secondary students", "Higher Education Department confirms stipend disbursement for merit students across districts.", 18],
     ];
     return rows.map(([category, title, summary, hours], i) => ({
       id: i + 1,

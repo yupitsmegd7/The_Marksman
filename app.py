@@ -1,3 +1,5 @@
+#.\.venv\Scripts\python.exe -m uvicorn app:app --reload --port 8000
+
 """app.py
 
 Fully standalone application module: settings/categories, DB engine/
@@ -20,7 +22,10 @@ Install:
 """
 
 import hashlib
+import os
 import re
+import threading
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -32,7 +37,7 @@ import yake
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from spacy import displacy
 import feedparser
 from pydantic import BaseModel
@@ -50,7 +55,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
     newsapi_key: str = ""
     gnews_api_key: str = ""
-    news_retention_days: int = 7
+    news_retention_days: int = 30
     ingestion_interval_minutes: int = 120
     internal_refresh_token: str = "change-me"
 
@@ -67,34 +72,45 @@ CATEGORIES = {
         "label": "Exams",
         "keywords": ["exam", "results", "admit card", "board exam", "university exam"],
         "rss_feeds": [
-            # Add real RSS feeds for exam boards / universities you track
+            "https://news.google.com/rss/search?q=India+exam+results+OR+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
         ],
     },
     "campus_events": {
         "label": "Campus Events",
         "keywords": ["campus", "fest", "hackathon", "convocation", "workshop"],
-        "rss_feeds": [],
+        "rss_feeds": [
+            "https://news.google.com/rss/search?q=college+fest+OR+hackathon+India&hl=en-IN&gl=IN&ceid=IN:en",
+        ],
     },
     "scholarships": {
         "label": "Scholarships",
         "keywords": ["scholarship", "internship", "fellowship", "stipend"],
-        "rss_feeds": [],
+        "rss_feeds": [
+            "https://news.google.com/rss/search?q=scholarship+India+students+OR+internship&hl=en-IN&gl=IN&ceid=IN:en",
+        ],
     },
     "education_news": {
         "label": "Education News",
         "keywords": ["education policy", "education technology", "online learning", "university"],
-        "rss_feeds": [],
+        "rss_feeds": [
+            "https://news.google.com/rss/search?q=education+policy+India+OR+university&hl=en-IN&gl=IN&ceid=IN:en",
+        ],
     },
     "student_news": {
         "label": "Student News",
         "keywords": ["student", "student union", "youth", "college student"],
-        "rss_feeds": [],
+        "rss_feeds": [
+            "https://news.google.com/rss/search?q=student+news+India&hl=en-IN&gl=IN&ceid=IN:en",
+            "https://www.abplive.com/news/india/feed",  # ABP Live — India news
+            "https://www.news18.com/commonfeeds/v1/eng/rss/india.xml",  # News18 — India news
+        ],
     },
     "kiit_news": {
         "label": "KIIT News",
         "keywords": ["KIIT", "KIIT University", "KIIT Bhubaneswar"],
         "rss_feeds": [
-            # Add KIIT's official announcements/press RSS feed here if available
+            "https://news.kiit.ac.in/feed/",  # official KIIT news site (WordPress default feed)
+            "https://news.google.com/rss/search?q=KIIT+University+Bhubaneswar&hl=en-IN&gl=IN&ceid=IN:en",
         ],
     },
 }
@@ -135,7 +151,7 @@ class Article(Base):
     summary = Column(Text, nullable=True)
     image_url = Column(String(1000), nullable=True)
     published_at = Column(DateTime, nullable=False, index=True)
-    scraped_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    scraped_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Populated on-demand (lazily, cached) the first time a reader opens
     # the headline popup — see get_or_build_insights() and the
@@ -276,14 +292,20 @@ def fetch_full_text(url: str, timeout: int = 12) -> str | None:
             url,
             timeout=timeout,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; TheMarksManBot/1.0)"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
         )
         response.raise_for_status()
     except httpx.HTTPError:
         return None
 
     text = trafilatura.extract(response.text, include_comments=False, include_tables=False)
-    return text.strip() if text else None
+    if text and len(text.strip()) >= 100:
+        return text.strip()
+    return None
 
 
 def get_or_build_insights(db: Session, article: Article) -> dict:
@@ -357,9 +379,18 @@ def fetch_rss_for_category(category_key: str) -> list[dict]:
     """Pull articles from every RSS feed configured for a category."""
     feeds = CATEGORIES.get(category_key, {}).get("rss_feeds", [])
     results: list[dict] = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    }
 
     for feed_url in feeds:
-        parsed = feedparser.parse(feed_url)
+        try:
+            resp = httpx.get(feed_url, timeout=10, headers=headers, follow_redirects=True)
+            parsed = feedparser.parse(resp.content)
+        except Exception:
+            parsed = feedparser.parse(feed_url)
+
         source_name = parsed.feed.get("title", feed_url)
 
         for entry in parsed.entries:
@@ -391,7 +422,7 @@ def fetch_rss_for_category(category_key: str) -> list[dict]:
     return results
 
 
-NEWSAPI_URL = "https://newsapi.org/v2/everything"
+NEWSAPI_URL = "44f5f859ff5f4bd1bb916abae4bc5511"
 
 
 def fetch_newsapi_for_category(category_key: str) -> list[dict]:
@@ -411,7 +442,7 @@ def fetch_newsapi_for_category(category_key: str) -> list[dict]:
         "q": query,
         "language": "en",
         "sortBy": "publishedAt",
-        "pageSize": 30,
+        "pageSize": 80,
         "apiKey": settings.newsapi_key,
     }
 
@@ -468,7 +499,7 @@ def run_ingestion() -> dict:
                 inserted += 1
         db.commit()
 
-        cutoff = datetime.utcnow() - timedelta(days=settings.news_retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=settings.news_retention_days)
         pruned = db.query(Article).filter(Article.published_at < cutoff).delete()
         db.commit()
     finally:
@@ -502,24 +533,40 @@ def start_scheduler():
 
 
 # --------------------------------------------------------------------------
-# FastAPI app
+# FastAPI app & Lifespan
 # --------------------------------------------------------------------------
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="The Marks Man API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    # Trigger initial ingestion in a background thread so FastAPI binds the port instantly
+    threading.Thread(target=run_ingestion, name="initial_news_ingestion", daemon=True).start()
+    yield
+    if scheduler.running:
+        scheduler.shutdown()
+
+
+app = FastAPI(title="The Marks Man API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.on_event("startup")
-def on_startup():
-    start_scheduler()
+@app.get("/", response_class=FileResponse, tags=["frontend"])
+def serve_frontend():
+    """Serves the main newspaper broadsheet frontend interface directly."""
+    index_file = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 
 @app.get("/health")
@@ -544,7 +591,7 @@ def internal_refresh(x_refresh_token: str = Header(default="")):
 @app.get("/api/categories", response_model=list[CategoryOut], tags=["news"])
 def list_categories():
     return [{"key": key, "label": val["label"]} for key, val in CATEGORIES.items()]
-
+#624c406b8cdfc1f13234bbe2afaacb25
 
 @app.get("/api/news", response_model=list[ArticleOut], tags=["news"])
 def get_news(
@@ -552,7 +599,7 @@ def get_news(
     limit: int = Query(default=30, le=100),
     db: Session = Depends(get_db),
 ):
-    cutoff = datetime.utcnow() - timedelta(days=settings.news_retention_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.news_retention_days)
     query = db.query(Article).filter(Article.published_at >= cutoff)
 
     if category:
@@ -563,7 +610,7 @@ def get_news(
 
 @app.get("/api/news/latest", response_model=list[ArticleOut], tags=["news"])
 def get_latest(limit: int = Query(default=10, le=50), db: Session = Depends(get_db)):
-    cutoff = datetime.utcnow() - timedelta(days=settings.news_retention_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.news_retention_days)
     return (
         db.query(Article)
         .filter(Article.published_at >= cutoff)

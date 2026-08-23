@@ -10,9 +10,12 @@ httpx==0.27.0
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 
-# NLP: headline popup (summary + keywords)
-
+# NLP: headline popup (summary + keywords + semantic vectors)
 trafilatura==1.9.0
 scikit-learn==1.5.0
 networkx==3.3
 yake==0.4.8
+spacy>=3.8.0
+numpy>=1.26.0
+# spaCy English medium model (word vectors):
+# python -m spacy download en_core_web_md

@@ -20,7 +20,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
 
-from app.models import Article
+from app import Article
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
 
@@ -29,7 +29,7 @@ _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9])")
 # Full-text extraction
 # --------------------------------------------------------------------------
 
-def fetch_full_text(url: str, timeout: int = 12) -> str|None:
+def fetch_full_text(url: str, timeout: int = 12) -> str | None:
     """Downloads the article page and pulls out just the main body
     text (strips nav, ads, comments, etc). Returns None if the fetch
     or extraction fails — callers should fall back to the RSS/API
@@ -40,14 +40,20 @@ def fetch_full_text(url: str, timeout: int = 12) -> str|None:
             url,
             timeout=timeout,
             follow_redirects=True,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; TheMarksManBot/1.0)"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
         )
         response.raise_for_status()
     except httpx.HTTPError:
         return None
 
     text = trafilatura.extract(response.text, include_comments=False, include_tables=False)
-    return text.strip() if text else None
+    if text and len(text.strip()) >= 100:
+        return text.strip()
+    return None
 
 
 # --------------------------------------------------------------------------

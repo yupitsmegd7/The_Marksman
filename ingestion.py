@@ -13,14 +13,16 @@ imports to `from app.ingestion import ...`.
 
 from datetime import datetime, timedelta, timezone
 import hashlib
+import html
+import re
 
 import feedparser
 import httpx
 from sqlalchemy.orm import Session
 
-from app.config import CATEGORIES, settings
-from app.database import SessionLocal
-from app.models import Article
+from app import CATEGORIES, settings
+from app import SessionLocal
+from app import Article
 
 NEWSAPI_URL = "https://newsapi.org/v2/everything"
 
@@ -41,15 +43,56 @@ def url_hash(url: str) -> str:
 # RSS fetching
 # --------------------------------------------------------------------------
 
+def clean_html(text: str) -> str:
+    """Strips HTML tags, unescapes entities, and collapses whitespace."""
+    if not text:
+        return ""
+    unescaped = html.unescape(str(text))
+    stripped = re.sub(r"<[^>]+>", " ", unescaped)
+    return re.sub(r"\s+", " ", stripped).strip()
+
+
+def extract_rss_image(entry) -> str | None:
+    """Robustly extracts image URL from media_content, media_thumbnail,
+    enclosures, links, or inline HTML img tags.
+    """
+    if entry.get("media_content") and isinstance(entry["media_content"], list) and "url" in entry["media_content"][0]:
+        return entry["media_content"][0]["url"]
+    if entry.get("media_thumbnail") and isinstance(entry["media_thumbnail"], list) and "url" in entry["media_thumbnail"][0]:
+        return entry["media_thumbnail"][0]["url"]
+    for enc in entry.get("enclosures", []):
+        href = enc.get("href", "")
+        if href and ("image" in enc.get("type", "") or any(href.lower().endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp"])):
+            return href
+    for l in entry.get("links", []):
+        href = l.get("href", "")
+        if href and ("image" in l.get("type", "") or l.get("rel") == "enclosure"):
+            return href
+    text = (entry.get("summary") or "") + " " + (entry.get("description") or "")
+    m = re.search(r'src=["\'](https?://[^"\'\s]+\.(?:jpg|jpeg|png|webp)[^"\'\s]*)["\']', text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    return None
+
+
 def fetch_rss_for_category(category_key: str) -> list[dict]:
     """Pull articles from every RSS feed configured for a category.
     Returns a list of dicts ready to be upserted as Article rows.
     """
     feeds = CATEGORIES.get(category_key, {}).get("rss_feeds", [])
     results: list[dict] = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    }
 
     for feed_url in feeds:
-        parsed = feedparser.parse(feed_url)
+        try:
+            resp = httpx.get(feed_url, timeout=10, headers=headers, follow_redirects=True)
+            parsed = feedparser.parse(resp.content)
+        except Exception:
+            parsed = feedparser.parse(feed_url)
+
         source_name = parsed.feed.get("title", feed_url)
 
         for entry in parsed.entries:
@@ -64,15 +107,20 @@ def fetch_rss_for_category(category_key: str) -> list[dict]:
                 else datetime.now(timezone.utc)
             )
 
+            image_url = extract_rss_image(entry)
+
+            raw_summary = entry.get("summary") or entry.get("description") or ""
+            cleaned_summary = clean_html(raw_summary)[:1000]
+
             results.append(
                 {
-                    "title": entry.get("title", "Untitled"),
+                    "title": clean_html(entry.get("title", "Untitled")),
                     "url": link,
                     "url_hash": url_hash(link),
                     "source": source_name,
                     "category": category_key,
-                    "summary": entry.get("summary", "")[:1000],
-                    "image_url": _extract_rss_image(entry),
+                    "summary": cleaned_summary,
+                    "image_url": image_url,
                     "published_at": published_at,
                 }
             )
@@ -147,42 +195,102 @@ def fetch_newsapi_for_category(category_key: str) -> list[dict]:
     return results
 
 
+GNEWS_URL = "https://gnews.io/api/v4/search"
+
+
+def fetch_gnews_for_category(category_key: str) -> list[dict]:
+    """Query GNews API using category keywords if GNEWS_API_KEY is configured."""
+    if not settings.gnews_api_key:
+        return []
+
+    keywords = CATEGORIES.get(category_key, {}).get("keywords", [])
+    if not keywords:
+        return []
+
+    query = " OR ".join(keywords[:5])
+    params = {
+        "q": query,
+        "lang": "en",
+        "country": "in",
+        "max": 20,
+        "apikey": settings.gnews_api_key,
+    }
+
+    try:
+        response = httpx.get(GNEWS_URL, params=params, timeout=15)
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return []
+
+    articles = response.json().get("articles", [])
+    results = []
+
+    for a in articles:
+        link = a.get("url")
+        if not link:
+            continue
+        published_raw = a.get("publishedAt")
+        try:
+            published_at = datetime.fromisoformat(published_raw.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            published_at = datetime.now(timezone.utc)
+
+        results.append(
+            {
+                "title": clean_html(a.get("title", "Untitled")),
+                "url": link,
+                "url_hash": url_hash(link),
+                "source": (a.get("source") or {}).get("name", "GNews"),
+                "category": category_key,
+                "summary": clean_html(a.get("description") or "")[:1000],
+                "image_url": a.get("image"),
+                "published_at": published_at,
+            }
+        )
+
+    return results
+
+
 # --------------------------------------------------------------------------
 # Orchestration
 # --------------------------------------------------------------------------
 
 def run_ingestion() -> dict:
-    """Fetches new articles for every category, inserts anything not
-    already seen (by url_hash), then prunes anything past the
-    retention window. Call this from the scheduler or the
+    """Fetches new articles for every category from Google News RSS feeds,
+    NewsAPI, and GNews API, inserts anything not already seen (by url_hash),
+    then prunes anything past the retention window. Call this from the scheduler or the
     /internal/refresh endpoint.
     """
     db: Session = SessionLocal()
     inserted = 0
+    pruned = 0
     try:
+        seen_hashes = {h for (h,) in db.query(Article.url_hash).all()}
         for category_key in CATEGORIES:
-            items = fetch_rss_for_category(category_key) + fetch_newsapi_for_category(category_key)
+            items = (
+                fetch_rss_for_category(category_key)
+                + fetch_newsapi_for_category(category_key)
+                + fetch_gnews_for_category(category_key)
+            )
             for item in items:
-                inserted += _upsert_article(db, item)
-        db.commit()
+                u_hash = item.get("url_hash")
+                if not u_hash or u_hash in seen_hashes:
+                    continue
+                seen_hashes.add(u_hash)
+                try:
+                    db.add(Article(**item))
+                    db.commit()
+                    inserted += 1
+                except Exception:
+                    db.rollback()
 
-        pruned = _prune_old_articles(db)
-        db.commit()
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=settings.news_retention_days)
+            pruned = db.query(Article).filter(Article.published_at < cutoff).delete()
+            db.commit()
+        except Exception:
+            db.rollback()
     finally:
         db.close()
 
     return {"inserted": inserted, "pruned": pruned}
-
-
-def _upsert_article(db: Session, item: dict) -> int:
-    exists = db.query(Article.id).filter(Article.url_hash == item["url_hash"]).first()
-    if exists:
-        return 0
-    db.add(Article(**item))
-    return 1
-
-
-def _prune_old_articles(db: Session) -> int:
-    cutoff = datetime.utcnow() - timedelta(days=settings.news_retention_days)
-    result = db.query(Article).filter(Article.published_at < cutoff).delete()
-    return result
